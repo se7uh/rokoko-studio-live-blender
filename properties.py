@@ -107,6 +107,16 @@ def register():
         name="Index for the retargeting bone list",
         default=0
     )
+    Scene.rsl_retargeting_ai_enabled = BoolProperty(
+        name="Enable AI",
+        description="Enable AI bone retargeting",
+        default=False
+    )
+    Scene.rsl_retargeting_ai_url = StringProperty(
+        name="API URL",
+        description="The URL of the OpenAI-compatible API",
+        default="https://api.openai.com/v1/chat/completions"
+    )
 
     # Objects
     Object.rsl_animations_props_trackers = EnumProperty(

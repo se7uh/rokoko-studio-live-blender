@@ -49,16 +49,24 @@ class RetargetingPanel(ToolPanel, bpy.types.Panel):
             self.draw_import_export(layout)
             return
 
-        subrow = layout.row(align=True)
-        row = subrow.row(align=True)
-        row.scale_y = 1.2
-        row.operator(retargeting.BuildBoneList.bl_idname, text='Rebuild Bone List', icon_value=Icons.CALIBRATE.get_icon())
-        row = subrow.row(align=True)
-        row.scale_y = 1.2
-        row.alignment = 'RIGHT'
-        row.operator(retargeting.ClearBoneList.bl_idname, text="", icon='X')
+        col = layout.column(align=True)
+        row = col.row(align=True)
+        row.prop(context.scene, "rsl_retargeting_ai_enabled", text="Use AI for Bone Pairing")
 
-        layout.separator()
+        if context.scene.rsl_retargeting_ai_enabled:
+            row = col.row(align=True)
+            row.prop(context.scene, "rsl_retargeting_ai_url", text="API URL")
+            row = col.row(align=True)
+            row.operator(retargeting.BuildBoneListWithAI.bl_idname, text="Rebuild with AI", icon_value=Icons.CALIBRATE.get_icon())
+        else:
+            subrow = layout.row(align=True)
+            row = subrow.row(align=True)
+            row.scale_y = 1.2
+            op = row.operator(retargeting.BuildBoneList.bl_idname, text='Rebuild Bone List', icon_value=Icons.CALIBRATE.get_icon())
+            row = subrow.row(align=True)
+            row.scale_y = 1.2
+            row.alignment = 'RIGHT'
+            row.operator(retargeting.ClearBoneList.bl_idname, text="", icon='X')
 
         row = layout.row(align=True)
         row.template_list("RSL_UL_BoneList", "Bone List", context.scene, "rsl_retargeting_bone_list", context.scene, "rsl_retargeting_bone_list_index", rows=1, maxrows=10)

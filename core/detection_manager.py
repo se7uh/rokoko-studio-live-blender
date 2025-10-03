@@ -384,3 +384,74 @@ def detect_retarget_bones() -> {str: (str, str)}:
                     break
 
     return retargeting_dict
+
+
+def detect_retarget_bones_with_ai(url, api_key):
+    """
+    Detects all matching bones in the target and source armatures using AI
+    :return: A dictionary with the source bone name as key and a tuple of the target bone name and their shared key name as value
+    """
+    import requests
+    import json
+
+    armature_source = retargeting.get_source_armature()
+    armature_target = retargeting.get_target_armature()
+
+    # Get all source bones from the animation and add them to bone_list_animated
+    bone_list_animated = []
+    for fc in armature_source.animation_data.action.fcurves:
+        bone_name = fc.data_path.split('"')
+        if len(bone_name) == 3 and bone_name[1] not in bone_list_animated:
+            bone_list_animated.append(bone_name[1])
+
+    # Get all target bones
+    bone_list_target = [bone.name for bone in armature_target.pose.bones]
+
+    # Construct the prompt
+    prompt = (
+        "You are a highly intelligent AI specializing in 3D animation and rigging. "
+        "Your task is to retarget bones from a source armature to a target armature. "
+        "Based on the provided lists of bone names, please map each source bone to the most appropriate target bone. "
+        "The output should be a JSON object where keys are the source bone names and values are the corresponding target bone names. "
+        "If a suitable match is not found for a source bone, its value should be an empty string. "
+        "Do not include bones that are not in the source list."
+        "\n\n"
+        f"Source bones: {json.dumps(bone_list_animated)}\n"
+        f"Target bones: {json.dumps(bone_list_target)}\n"
+    )
+
+    # Prepare the data for the API request
+    data = {
+        "model": "gpt-4",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0
+    }
+
+    # Make the request to the OpenAI-compatible API
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    response = requests.post(url, headers=headers, json=data)
+
+    if response.status_code != 200:
+        print(f"Error: API request failed with status code {response.status_code}")
+        print(response.text)
+        return detect_retarget_bones()
+
+    # Parse the response
+    try:
+        response_json = response.json()
+        content_str = response_json['choices'][0]['message']['content']
+        mapped_bones = json.loads(content_str)
+    except (KeyError, IndexError, json.JSONDecodeError) as e:
+        print(f"Error parsing AI response: {e}")
+        return detect_retarget_bones()
+
+    # Build the retargeting dictionary
+    retargeting_dict = {}
+    for source_bone, target_bone in mapped_bones.items():
+        if source_bone in bone_list_animated:
+            retargeting_dict[source_bone] = (target_bone, "N/A")  # Key is not essential for AI mapping
+
+    return retargeting_dict

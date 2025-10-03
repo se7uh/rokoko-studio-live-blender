@@ -47,6 +47,45 @@ class BuildBoneList(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class BuildBoneListWithAI(bpy.types.Operator):
+    bl_idname = "rsl.build_bone_list_with_ai"
+    bl_label = "Build Bone List with AI"
+    bl_description = "Builds the bone list from the animation and tries to automatically detect and match bones using AI"
+    bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
+
+    def execute(self, context):
+        armature_source = get_source_armature()
+        armature_target = get_target_armature()
+
+        if not armature_source.animation_data or not armature_source.animation_data.action:
+            self.report({'ERROR'}, 'No animation on the source armature found!'
+                                   '\nSelect an armature with an animation as source.')
+            return {'CANCELLED'}
+
+        if armature_source.name == armature_target.name:
+            self.report({'ERROR'}, 'Source and target armature are the same!'
+                                   '\nPlease select different armatures.')
+            return {'CANCELLED'}
+
+        retargeting_dict = detector.detect_retarget_bones_with_ai(
+            context.scene.rsl_retargeting_ai_url,
+            context.scene.rsl_command_api_key
+        )
+
+        # Clear the bone retargeting list
+        context.scene.rsl_retargeting_bone_list.clear()
+
+        for bone_source, bone_values in retargeting_dict.items():
+            bone_target, bone_key = bone_values
+
+            bone_item = context.scene.rsl_retargeting_bone_list.add()
+            bone_item.bone_name_key = bone_key
+            bone_item.bone_name_source = bone_source
+            bone_item.bone_name_target = bone_target
+
+        return {'FINISHED'}
+
+
 class AddBoneListItem(bpy.types.Operator):
     bl_idname = "rsl.add_bone_list_item"
     bl_label = "Add Bone List Item"
