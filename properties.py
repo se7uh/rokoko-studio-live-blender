@@ -100,6 +100,29 @@ def register():
             ("CURRENT", "Current", "Select this to use the current pose during retargeting.")
         ]
     )
+    Scene.rsl_retargeting_ai_enabled = BoolProperty(
+        name='Enable AI Matching',
+        description='Toggle to enable the AI-powered bone matching workflow',
+        default=False
+    )
+    Scene.rsl_retargeting_ai_endpoint = StringProperty(
+        name='AI Endpoint',
+        description='OpenAI-compatible endpoint that will receive the retargeting context.\n'
+                    'Example: https://api.openai.com/v1/chat/completions',
+        default='https://api.openai.com/v1/chat/completions'
+    )
+    Scene.rsl_retargeting_ai_model = StringProperty(
+        name='AI Model',
+        description='Name of the OpenAI-compatible model that should be used for bone matching',
+        default='gpt-4o-mini'
+    )
+    Scene.rsl_retargeting_ai_api_key = StringProperty(
+        name='AI API Key',
+        description='API key that will be sent as Bearer token when requesting the AI endpoint',
+        default='',
+        subtype='PASSWORD',
+        maxlen=512
+    )
     Scene.rsl_retargeting_bone_list = CollectionProperty(
         type=retargeting_ui.BoneListItem
     )

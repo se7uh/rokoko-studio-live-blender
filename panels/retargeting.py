@@ -36,9 +36,11 @@ class RetargetingPanel(ToolPanel, bpy.types.Panel):
         if not anim_exists:
             row = layout.row(align=True)
             row.label(text='No animated armature found!', icon='INFO')
+            self.draw_ai(layout, context)
             return
 
         if not context.scene.rsl_retargeting_armature_source or not context.scene.rsl_retargeting_armature_target:
+            self.draw_ai(layout, context)
             self.draw_import_export(layout)
             return
 
@@ -46,6 +48,7 @@ class RetargetingPanel(ToolPanel, bpy.types.Panel):
             row = layout.row(align=True)
             row.scale_y = 1.2
             row.operator(retargeting.BuildBoneList.bl_idname, icon_value=Icons.CALIBRATE.get_icon())
+            self.draw_ai(layout, context)
             self.draw_import_export(layout)
             return
 
@@ -77,6 +80,7 @@ class RetargetingPanel(ToolPanel, bpy.types.Panel):
         row.scale_y = 1.4
         row.operator(retargeting.RetargetAnimation.bl_idname, icon_value=Icons.CALIBRATE.get_icon())
 
+        self.draw_ai(layout, context)
         self.draw_import_export(layout)
 
     def draw_import_export(self, layout):
@@ -95,6 +99,23 @@ class RetargetingPanel(ToolPanel, bpy.types.Panel):
         row.scale_y = 0.9
         row.alignment = 'RIGHT'
         row.operator(detector.ClearCustomBones.bl_idname, text='', icon='X')
+
+    def draw_ai(self, layout, context):
+        layout.separator()
+
+        box = layout.box()
+        box.label(text='AI Bone Matching:')
+
+        box.prop(context.scene, 'rsl_retargeting_ai_enabled')
+
+        col = box.column(align=True)
+        col.prop(context.scene, 'rsl_retargeting_ai_endpoint', text='Endpoint')
+        col.prop(context.scene, 'rsl_retargeting_ai_model', text='Model')
+        col.prop(context.scene, 'rsl_retargeting_ai_api_key', text='API Key')
+
+        row = box.row(align=True)
+        row.enabled = context.scene.rsl_retargeting_ai_enabled and bool(context.scene.rsl_retargeting_bone_list)
+        row.operator(retargeting.MatchBonesAI.bl_idname, icon='OUTLINER_OB_ARMATURE')
 
 
 class BoneListItem(PropertyGroup):

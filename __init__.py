@@ -100,6 +100,7 @@ classes_always_enable = [  # These non-panels will always be loaded, all non-pan
     operators.retargeting.BuildBoneList,
     operators.retargeting.AddBoneListItem,
     operators.retargeting.ClearBoneList,
+    operators.retargeting.MatchBonesAI,
     operators.retargeting.RetargetAnimation,
     panels.retargeting.RSL_UL_BoneList,
     panels.retargeting.BoneListItem,
