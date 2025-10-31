@@ -3,6 +3,7 @@ import copy
 
 from . import detector
 from ..core import utils
+from ..core import ai_bone_matching
 from ..core.retargeting import get_source_armature, get_target_armature
 from ..core import detection_manager as detector
 from ..core import custom_schemes_manager
@@ -71,6 +72,70 @@ class ClearBoneList(bpy.types.Operator):
         for bone_item in context.scene.rsl_retargeting_bone_list:
             bone_item.bone_name_target = ''
         return {'FINISHED'}
+
+
+class MatchBonesAI(bpy.types.Operator):
+    bl_idname = "rsl.ai_match_bones"
+    bl_label = "Match Bones with AI"
+    bl_description = "Use an OpenAI-compatible endpoint to suggest target bones for the current retargeting list"
+    bl_options = {'REGISTER', 'UNDO', 'INTERNAL'}
+
+    def execute(self, context):
+        scene = context.scene
+
+        if not scene.rsl_retargeting_bone_list:
+            self.report({'ERROR'}, 'Build the bone list before requesting AI matches.')
+            return {'CANCELLED'}
+
+        bone_items = [
+            ai_bone_matching.BoneItem(
+                bone_name_source=item.bone_name_source,
+                bone_name_target=item.bone_name_target,
+                bone_name_key=item.bone_name_key,
+            )
+            for item in scene.rsl_retargeting_bone_list
+        ]
+
+        try:
+            assignments = ai_bone_matching.match_bones(scene, bone_items)
+        except ai_bone_matching.AIBoneMatchingConfigurationError as exc:
+            self.report({'ERROR'}, str(exc))
+            return {'CANCELLED'}
+        except ai_bone_matching.AIBoneMatchingRequestError as exc:
+            self.report({'ERROR'}, f'AI request failed: {exc}')
+            return {'CANCELLED'}
+        except ai_bone_matching.AIBoneMatchingResponseError as exc:
+            self.report({'ERROR'}, f'Invalid AI response: {exc}')
+            return {'CANCELLED'}
+
+        if not assignments:
+            self.report({'WARNING'}, 'AI did not return any assignments.')
+            return {'CANCELLED'}
+
+        target_armature = get_target_armature()
+        valid_targets = {bone.name for bone in target_armature.pose.bones} if target_armature and target_armature.pose else set()
+
+        applied = 0
+        ignored = []
+        for item in scene.rsl_retargeting_bone_list:
+            match = assignments.get(item.bone_name_source)
+            if not match:
+                continue
+            if match not in valid_targets:
+                ignored.append(f"{item.bone_name_source} → {match}")
+                continue
+            item.bone_name_target = match
+            applied += 1
+
+        if applied:
+            message = f'Applied AI matches to {applied} bone(s).'
+            if ignored:
+                message += f' Ignored {len(ignored)} invalid suggestion(s).'
+            self.report({'INFO'}, message)
+            return {'FINISHED'}
+
+        self.report({'WARNING'}, 'No AI suggestions could be applied to the current bone list.')
+        return {'CANCELLED'}
 
 
 class RetargetAnimation(bpy.types.Operator):
